@@ -23,11 +23,13 @@ local GATE_CONF = {
 			name = "ws_gate_1",
 			type = "websocket",
 			port = 8891,
+			protocol = "ws",
 		},
 		{
 			name = "ws_gate_2",
 			type = "websocket",
 			port = 8892,
+			protocol = "ws",
 		},
 	}
 }
@@ -73,12 +75,21 @@ local function start_gate(conf, balance_service)
 		error("Unknown gate type: " .. conf.type)
 	end
 
+	skynet.error(string.format("Starting %s gate %s on port %d", 
+		conf.type, conf.name, conf.port))
+
 	local addr, port = skynet.call(watchdog, "lua", "start", {
 		port = conf.port,
 		maxclient = max_client,
 		nodelay = true,
 		balance = balance_service,
+		protocol = conf.protocol,
 	})
+	
+	if not addr then
+		skynet.error(string.format("Failed to start gate %s: %s", conf.name, port))
+		return false
+	end
 	
 	skynet.error(string.format("%s(%s) listen on %s:%s", 
 		conf.name, conf.type, addr, port))
@@ -107,9 +118,13 @@ skynet.start(function()
 	skynet.call(balance_service, "lua", "register_game_services", game_services)
 	
 	-- 启动所有网关组的网关
-	for _, gates in pairs(GATE_CONF) do
+	for group_name, gates in pairs(GATE_CONF) do
+		skynet.error(string.format("Starting gate group: %s", group_name))
 		for _, gate_conf in ipairs(gates) do
-			start_gate(gate_conf, balance_service)
+			local ok = start_gate(gate_conf, balance_service)
+			if not ok then
+				skynet.error(string.format("Failed to start gate group %s", group_name))
+			end
 		end
 	end
 	

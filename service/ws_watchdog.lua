@@ -101,16 +101,29 @@ end
 function CMD.start(conf)
     balance = conf.balance  -- 保存负载均衡服务引用
     start_load_update()
+    
     local protocol = conf.protocol or "ws"
     local port = assert(conf.port)
+    
+    -- 添加日志
+    skynet.error(string.format("WS_Watchdog(%d) starting on port %d, protocol: %s", 
+        skynet.self(), port, protocol))
+    
     local id = socket.listen("0.0.0.0", port)
-    skynet.error(string.format("Listening %s port:%d", protocol, port))
+    if not id then
+        skynet.error(string.format("WS_Watchdog(%d) failed to listen on port %d", 
+            skynet.self(), port))
+        return nil, "listen failed"
+    end
+    
+    skynet.error(string.format("WS_Watchdog(%d) listening on port %d", skynet.self(), port))
     
     socket.start(id, function(fd, addr)
-        print(string.format("connect from %s", addr))
+        skynet.error(string.format("WS_Watchdog(%d) new connection from %s", skynet.self(), addr))
         local ok, err = websocket.accept(fd, handler, protocol, addr)
         if not ok then
-            print(err)
+            skynet.error(string.format("WS_Watchdog(%d) websocket accept failed: %s", 
+                skynet.self(), err))
         end
     end)
     
