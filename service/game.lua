@@ -16,7 +16,7 @@ function HANDLER.echo(fd, msg)
 end
 
 -- 处理客户端消息
-function CMD.client_message(fd, msg, msg_type, source)
+function CMD.client_message(source, fd, msg, msg_type)
     skynet.error(string.format("Game(%d) received message from agent(%d), fd=%d, type=%s", 
         skynet.self(), source, fd, msg_type))
     
@@ -55,7 +55,7 @@ function CMD.client_message(fd, msg, msg_type, source)
 end
 
 -- 客户端断开连接
-function CMD.client_disconnect(fd, source)
+function CMD.client_disconnect(source, fd)
     local user = users[fd]
     if user then
         skynet.error(string.format("Game(%d) client disconnect, fd=%d, agent=%d", 
@@ -105,7 +105,7 @@ skynet.start(function()
     skynet.dispatch("lua", function(session, source, cmd, ...)
         local f = CMD[cmd]
         if f then
-            skynet.ret(skynet.pack(f(..., source)))
+            skynet.ret(skynet.pack(f(source, ...)))
         else
             skynet.error("Unknown command ", cmd)
         end

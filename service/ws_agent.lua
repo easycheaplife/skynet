@@ -25,8 +25,9 @@ end
 function CMD.disconnect()
     -- 通知游戏服务客户端断开
     if game then
-        skynet.error(string.format("Agent(%d) notify game(%d) client disconnect, fd=%d", skynet.self(), game, client_fd))
-        skynet.send(game, "lua", "client_disconnect", client_fd, skynet.self())
+        skynet.error(string.format("Agent(%d) notify game(%d) client disconnect, fd=%d", 
+            skynet.self(), game, client_fd))
+        skynet.send(game, "lua", "client_disconnect", client_fd)
     end
     skynet.exit()
 end
@@ -36,7 +37,7 @@ function CMD.message(msg, msg_type)
     if game then
         skynet.error(string.format("Agent(%d) forward message to game(%d), fd=%d, type=%s", 
             skynet.self(), game, client_fd, msg_type))
-        skynet.send(game, "lua", "client_message", client_fd, msg, msg_type, skynet.self())
+        skynet.send(game, "lua", "client_message", client_fd, msg, msg_type)
     end
 end
 
