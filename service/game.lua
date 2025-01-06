@@ -4,6 +4,7 @@ local game = {}
 local users = {}  -- fd -> user_info
 local CMD = {}
 local HANDLER = {}
+local balance    -- 负载均衡服务
 
 -- 消息处理函数
 function HANDLER.hello(fd, msg)
@@ -48,10 +49,41 @@ function CMD.client_disconnect(fd)
     users[fd] = nil
 end
 
+-- 在 game.lua 中添加负载更新函数
+local function update_load()
+    if balance then
+        local load = {
+            connections = #users,
+            cpu = 0,  -- 可以添加CPU使用率统计
+            memory = 0,  -- 可以添加内存使用统计
+        }
+        -- 计算综合负载
+        local total_load = load.connections * 0.6 + load.cpu * 0.2 + load.memory * 0.2
+        
+        skynet.send(balance, "lua", "update_service_status", 
+            "game_services",
+            skynet.self(),
+            #users,
+            total_load
+        )
+    end
+end
+
+local function start_load_update()
+    skynet.fork(function()
+        while true do
+            update_load()
+            skynet.sleep(100)  -- 每10秒更新一次
+        end
+    end)
+end
+
+function CMD.start(conf)
+    balance = conf.balance
+    start_load_update()
+end
+
 skynet.start(function()
-    -- 注册为唯一服务
-    skynet.name(".game", skynet.self())  -- 使用 skynet.name 注册服务
-    
     skynet.dispatch("lua", function(session, source, cmd, ...)
         local f = CMD[cmd]
         if f then

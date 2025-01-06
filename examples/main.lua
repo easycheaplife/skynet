@@ -32,6 +32,21 @@ local GATE_CONF = {
 	}
 }
 
+-- 游戏服务配置
+local GAME_CONF = {
+	instance_count = 2,  -- 游戏服务实例数量
+}
+
+-- 启动游戏服务组
+local function start_game_services()
+	local game_services = {}
+	for i = 1, GAME_CONF.instance_count do
+		local game = skynet.newservice("game")
+		table.insert(game_services, game)
+	end
+	return game_services
+end
+
 -- 负载均衡服务
 local function start_balance_service()
 	local balance = skynet.newservice("balance")
@@ -58,7 +73,7 @@ local function start_gate(conf, balance_service)
 		port = conf.port,
 		maxclient = max_client,
 		nodelay = true,
-		balance = balance_service, -- 传入负载均衡服务
+		balance = balance_service,
 	})
 	
 	skynet.error(string.format("%s(%s) listen on %s:%s", 
@@ -78,11 +93,14 @@ skynet.start(function()
 	skynet.newservice("debug_console", 8000)
 	skynet.newservice("simpledb")
 	
-	-- 启动游戏服务
-	local game = skynet.newservice("game")
+	-- 启动游戏服务组
+	local game_services = start_game_services()
 	
 	-- 启动负载均衡服务
 	local balance_service = start_balance_service()
+	
+	-- 注册游戏服务到负载均衡服务
+	skynet.call(balance_service, "lua", "register_game_services", game_services)
 	
 	-- 启动所有网关组的网关
 	for _, gates in pairs(GATE_CONF) do

@@ -11,8 +11,11 @@ local CLIENT = {}
 function CMD.start(conf)
     local fd = conf.fd
     client_fd = fd
-    -- 获取游戏服务
-    game = skynet.queryservice("game")
+    
+    -- 从负载均衡服务获取游戏服务
+    local balance = conf.balance
+    game = skynet.call(balance, "lua", "get_game_service")
+    
     skynet.call(WATCHDOG, "lua", "forward", fd)
 end
 
