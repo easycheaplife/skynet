@@ -6,6 +6,42 @@ local WATCHDOG
 local client_fd
 local game     -- 游戏服务
 
+-- WebSocket 帧构建函数
+local function build_websocket_frame(data, opcode)
+    local payload_len = #data
+    local header = {}
+    
+    -- 第一个字节: FIN + RSV + OPCODE
+    -- FIN = 1, RSV1-3 = 0
+    local first_byte = 0x80  -- 10000000
+    if opcode == "text" then
+        first_byte = first_byte | 0x01  -- 0x01 for text
+    elseif opcode == "binary" then
+        first_byte = first_byte | 0x02  -- 0x02 for binary
+    end
+    table.insert(header, string.char(first_byte))
+    
+    -- 第二个字节开始: MASK + PAYLOAD LEN
+    -- MASK = 0 (服务器发送不需要掩码)
+    if payload_len < 126 then
+        table.insert(header, string.char(payload_len))
+    elseif payload_len < 0xFFFF then
+        table.insert(header, string.char(126))
+        table.insert(header, string.char(payload_len >> 8))
+        table.insert(header, string.char(payload_len & 0xFF))
+    else
+        table.insert(header, string.char(127))
+        local len = payload_len
+        for i = 1, 8 do
+            table.insert(header, string.char(len & 0xFF))
+            len = len >> 8
+        end
+    end
+    
+    -- 拼接头部和数据
+    return table.concat(header) .. data
+end
+
 local CMD = {}
 local CLIENT = {}
 
@@ -46,8 +82,8 @@ function CMD.send_client(msg)
     skynet.error(string.format("Agent(%d) send to client, fd=%d, msg=%s", 
         skynet.self(), client_fd, tostring(msg)))
     
-    -- 使用 socket.write 发送数据
-    local frame = websocket.build_frame(msg, "text", true, true)
+    -- 构建并发送 WebSocket 帧
+    local frame = build_websocket_frame(msg, "text")
     socket.write(client_fd, frame)
 end
 
