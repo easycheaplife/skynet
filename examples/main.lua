@@ -44,12 +44,25 @@ local function start_game_services(balance_service)
 	local game_services = {}
 	for i = 1, GAME_CONF.instance_count do
 		local game = skynet.newservice("game")
+		skynet.error(string.format("Starting game service %d", game))
+		
 		-- 初始化游戏服务，传入负载均衡服务
-		skynet.call(game, "lua", "start", {
+		local ok = skynet.call(game, "lua", "start", {
 			balance = balance_service
 		})
-		table.insert(game_services, game)
+		
+		if ok then
+			skynet.error(string.format("Game service %d started successfully", game))
+			table.insert(game_services, game)
+		else
+			skynet.error(string.format("Failed to start game service %d", game))
+		end
 	end
+	
+	if #game_services == 0 then
+		error("No game services started successfully")
+	end
+	
 	return game_services
 end
 

@@ -96,7 +96,16 @@ local function start_load_update()
 end
 
 function CMD.start(conf)
+    if type(conf) ~= "table" then
+        skynet.error(string.format("Game(%d) start failed: invalid conf type %s", 
+            skynet.self(), type(conf)))
+        return false
+    end
+    
     balance = assert(conf.balance, "balance service not found")
+    skynet.error(string.format("Game(%d) starting with balance service(%d)", 
+        skynet.self(), balance))
+    
     start_load_update()
     return true
 end
@@ -105,9 +114,15 @@ skynet.start(function()
     skynet.dispatch("lua", function(session, source, cmd, ...)
         local f = CMD[cmd]
         if f then
-            skynet.ret(skynet.pack(f(source, ...)))
+            if cmd == "client_message" or cmd == "client_disconnect" then
+                -- 这些命令需要 source 参数
+                skynet.ret(skynet.pack(f(source, ...)))
+            else
+                -- 其他命令直接传参
+                skynet.ret(skynet.pack(f(...)))
+            end
         else
-            skynet.error("Unknown command ", cmd)
+            skynet.error(string.format("Game(%d) unknown command: %s", skynet.self(), cmd))
         end
     end)
 end)
