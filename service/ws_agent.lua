@@ -3,6 +3,7 @@ local socket = require "skynet.socket"
 
 local WATCHDOG
 local client_fd
+local game     -- 游戏服务
 
 local CMD = {}
 local CLIENT = {}
@@ -10,26 +11,32 @@ local CLIENT = {}
 function CMD.start(conf)
     local fd = conf.fd
     client_fd = fd
+    -- 获取游戏服务
+    game = skynet.queryservice("game")
     skynet.call(WATCHDOG, "lua", "forward", fd)
 end
 
 function CMD.disconnect()
-    -- todo: do something before exit
+    -- 通知游戏服务客户端断开
+    if game then
+        skynet.send(game, "lua", "client_disconnect", client_fd)
+    end
     skynet.exit()
 end
 
 function CMD.message(msg, msg_type)
-    -- 处理接收到的消息
-    print("receive message", msg, msg_type)
-    
-    -- 这里处理业务逻辑
-    if msg_type == "text" then
-        -- 直接处理文本消息
-        print("received text:", msg)
-        -- 这里可以添加消息处理逻辑
-    elseif msg_type == "binary" then
-        -- 处理二进制消息
-        print("received binary message, length:", #msg)
+    -- 转发消息到游戏服务
+    if game then
+        skynet.send(game, "lua", "client_message", client_fd, msg, msg_type)
+    end
+end
+
+-- 发送消息给客户端
+function CMD.send_client(msg)
+    -- 这里可以根据需要选择文本或二进制格式
+    local ok, err = websocket.write(client_fd, msg, "text")
+    if not ok then
+        skynet.error("Send to client error:", err)
     end
 end
 
