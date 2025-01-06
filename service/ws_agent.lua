@@ -1,7 +1,6 @@
 local skynet = require "skynet"
 local socket = require "skynet.socket"
 local websocket = require "http.websocket"
-local bit = require "bit"
 
 local WATCHDOG
 local client_fd
@@ -16,9 +15,9 @@ local function build_websocket_frame(data, opcode)
     -- FIN = 1, RSV1-3 = 0
     local first_byte = 0x80  -- 10000000
     if opcode == "text" then
-        first_byte = bit.bor(first_byte, 0x01)  -- 0x01 for text
+        first_byte = 0x81  -- 10000001 for text
     elseif opcode == "binary" then
-        first_byte = bit.bor(first_byte, 0x02)  -- 0x02 for binary
+        first_byte = 0x82  -- 10000010 for binary
     end
     table.insert(header, string.char(first_byte))
     
@@ -28,14 +27,22 @@ local function build_websocket_frame(data, opcode)
         table.insert(header, string.char(payload_len))
     elseif payload_len < 0xFFFF then
         table.insert(header, string.char(126))
-        table.insert(header, string.char(bit.rshift(payload_len, 8)))
-        table.insert(header, string.char(bit.band(payload_len, 0xFF)))
+        -- 拆分 16 位长度为两个字节
+        local high = math.floor(payload_len / 256)
+        local low = payload_len % 256
+        table.insert(header, string.char(high))
+        table.insert(header, string.char(low))
     else
         table.insert(header, string.char(127))
+        -- 拆分 64 位长度为 8 个字节
         local len = payload_len
+        local bytes = {}
         for i = 1, 8 do
-            table.insert(header, string.char(bit.band(len, 0xFF)))
-            len = bit.rshift(len, 8)
+            table.insert(bytes, 1, string.char(len % 256))
+            len = math.floor(len / 256)
+        end
+        for _, b in ipairs(bytes) do
+            table.insert(header, b)
         end
     end
     
