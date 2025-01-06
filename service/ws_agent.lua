@@ -1,5 +1,6 @@
 local skynet = require "skynet"
 local socket = require "skynet.socket"
+local websocket = require "http.websocket"
 
 local WATCHDOG
 local client_fd

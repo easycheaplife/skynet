@@ -21,7 +21,7 @@ function CMD.client_message(fd, msg, msg_type)
     if not user then
         user = {
             fd = fd,
-            gate = skynet.source(),  -- 记录来源gate
+            gate = skynet.self(),  -- 记录当前服务
         }
         users[fd] = user
     end
@@ -35,8 +35,8 @@ function CMD.client_message(fd, msg, msg_type)
             -- 处理消息并返回结果
             local response = f(fd, params)
             if response then
-                -- 通过gate返回给客户端
-                skynet.send(user.gate, "lua", "send_client", fd, response)
+                -- 通过agent返回给客户端
+                skynet.send(source, "lua", "send_client", response)
             end
         else
             skynet.error("Unknown command:", cmd)
