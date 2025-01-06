@@ -8,32 +8,22 @@ local GATE_CONF = {
 
 -- 游戏服务配置
 local GAME_CONF = {
-	instance_count = 2,  -- 游戏服务实例数量
+	instance_count = 1,  -- 改为只启动一个游戏服务实例
 }
 
 -- 启动游戏服务组
 local function start_game_services()
-	local game_services = {}
-	for i = 1, GAME_CONF.instance_count do
-		local game = skynet.newservice("game")
-		skynet.error(string.format("Starting game service %d", game))
-		
-		-- 初始化游戏服务
-		local ok = skynet.call(game, "lua", "start")
-		
-		if ok then
-			skynet.error(string.format("Game service %d started successfully", game))
-			table.insert(game_services, game)
-		else
-			skynet.error(string.format("Failed to start game service %d", game))
-		end
+	local game = skynet.newservice("game")
+	skynet.error(string.format("Starting game service %d", game))
+	
+	-- 初始化游戏服务
+	local ok = skynet.call(game, "lua", "start")
+	if not ok then
+		error(string.format("Failed to start game service %d", game))
 	end
 	
-	if #game_services == 0 then
-		error("No game services started successfully")
-	end
-	
-	return game_services[1]  -- 返回第一个游戏服务
+	skynet.error(string.format("Game service %d started successfully", game))
+	return game  -- 直接返回游戏服务
 end
 
 -- 启动网关

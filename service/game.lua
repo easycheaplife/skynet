@@ -95,18 +95,12 @@ local function start_load_update()
     end)
 end
 
-function CMD.start(conf)
-    if type(conf) ~= "table" then
-        skynet.error(string.format("Game(%d) start failed: invalid conf type %s", 
-            skynet.self(), type(conf)))
-        return false
-    end
+function CMD.start()
+    skynet.error(string.format("Game(%d) starting", skynet.self()))
     
-    balance = assert(conf.balance, "balance service not found")
-    skynet.error(string.format("Game(%d) starting with balance service(%d)", 
-        skynet.self(), balance))
+    -- 这里可以添加游戏服务的初始化逻辑
     
-    start_load_update()
+    skynet.error(string.format("Game(%d) started successfully", skynet.self()))
     return true
 end
 
