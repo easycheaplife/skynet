@@ -3,9 +3,9 @@ local socket = require "skynet.socket"
 local websocket = require "http.websocket"
 
 local WATCHDOG
-local connection = {}
+local connection = {}  -- fd -> agent
 local handler = {}
-local balance    -- 负载均衡服务
+local game_service    -- 游戏服务
 
 function handler.connect(fd)
     skynet.error(string.format("Watchdog(%d) new client connect, fd=%d", skynet.self(), fd))
@@ -15,7 +15,7 @@ function handler.connect(fd)
     
     skynet.call(agent, "lua", "start", { 
         fd = fd,
-        balance = balance
+        game = game_service  -- 直接传入游戏服务
     })
     connection[fd] = agent
 end
@@ -70,38 +70,8 @@ end
 
 local CMD = {}
 
-local function update_load()
-    if balance then
-        local load = {
-            connections = #connection,
-            cpu = 0,  -- CPU使用率
-            memory = 0,  -- 内存使用
-        }
-        -- 计算综合负载
-        local total_load = load.connections * 0.6 + load.cpu * 0.2 + load.memory * 0.2
-        
-        skynet.send(balance, "lua", "update_gate_status", 
-            "ws_gates",   -- WebSocket网关组
-            skynet.self(),
-            #connection,
-            total_load
-        )
-    end
-end
-
-local function start_load_update()
-    skynet.fork(function()
-        while true do
-            update_load()
-            skynet.sleep(100)
-        end
-    end)
-end
-
 function CMD.start(conf)
-    balance = conf.balance  -- 保存负载均衡服务引用
-    start_load_update()
-    
+    game_service = assert(conf.game, "game service not found")
     local protocol = conf.protocol or "ws"
     local port = assert(conf.port)
     

@@ -57,10 +57,8 @@ function CMD.start(conf)
     local fd = conf.fd
     client_fd = fd
     
-    -- 从watchdog配置中获取负载均衡服务
-    local balance = assert(conf.balance, "balance service not found")
-    skynet.error(string.format("Agent(%d) getting game service from balance(%d)", skynet.self(), balance))
-    game = assert(skynet.call(balance, "lua", "get_game_service"))
+    -- 直接使用传入的游戏服务
+    game = assert(conf.game, "game service not found")
     skynet.error(string.format("Agent(%d) got game service(%d)", skynet.self(), game))
     
     skynet.call(WATCHDOG, "lua", "forward", fd)
