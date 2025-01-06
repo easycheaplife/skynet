@@ -1,6 +1,7 @@
 local skynet = require "skynet"
 local socket = require "skynet.socket"
 local websocket = require "http.websocket"
+local bit = require "bit"
 
 local WATCHDOG
 local client_fd
@@ -15,9 +16,9 @@ local function build_websocket_frame(data, opcode)
     -- FIN = 1, RSV1-3 = 0
     local first_byte = 0x80  -- 10000000
     if opcode == "text" then
-        first_byte = first_byte | 0x01  -- 0x01 for text
+        first_byte = bit.bor(first_byte, 0x01)  -- 0x01 for text
     elseif opcode == "binary" then
-        first_byte = first_byte | 0x02  -- 0x02 for binary
+        first_byte = bit.bor(first_byte, 0x02)  -- 0x02 for binary
     end
     table.insert(header, string.char(first_byte))
     
@@ -27,14 +28,14 @@ local function build_websocket_frame(data, opcode)
         table.insert(header, string.char(payload_len))
     elseif payload_len < 0xFFFF then
         table.insert(header, string.char(126))
-        table.insert(header, string.char(payload_len >> 8))
-        table.insert(header, string.char(payload_len & 0xFF))
+        table.insert(header, string.char(bit.rshift(payload_len, 8)))
+        table.insert(header, string.char(bit.band(payload_len, 0xFF)))
     else
         table.insert(header, string.char(127))
         local len = payload_len
         for i = 1, 8 do
-            table.insert(header, string.char(len & 0xFF))
-            len = len >> 8
+            table.insert(header, string.char(bit.band(len, 0xFF)))
+            len = bit.rshift(len, 8)
         end
     end
     
