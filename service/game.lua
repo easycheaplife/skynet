@@ -20,7 +20,7 @@ function CMD.client_message(fd, msg, msg_type)
     if not user then
         user = {
             fd = fd,
-            gate = skynet.self(),  -- 记录来源gate
+            gate = skynet.source(),  -- 记录来源gate，使用source()获取消息来源
         }
         users[fd] = user
     end
@@ -50,7 +50,7 @@ end
 
 skynet.start(function()
     -- 注册为唯一服务
-    skynet.register ".game"
+    skynet.register("game")
     
     skynet.dispatch("lua", function(session, source, cmd, ...)
         local f = CMD[cmd]
