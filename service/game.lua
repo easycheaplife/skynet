@@ -17,52 +17,69 @@ end
 
 -- 处理客户端消息
 function CMD.client_message(fd, msg, msg_type)
+    skynet.error(string.format("Game(%d) received message from agent(%d), fd=%d, type=%s", 
+        skynet.self(), skynet.source(), fd, msg_type))
+    
     local user = users[fd]
     if not user then
         user = {
             fd = fd,
-            gate = skynet.self(),  -- 记录当前服务
+            agent = skynet.source(),  -- 记录来源agent
         }
         users[fd] = user
+        skynet.error(string.format("Game(%d) new client connected from agent(%d), fd=%d", 
+            skynet.self(), user.agent, fd))
     end
     
     -- 解析消息
     if msg_type == "text" then
         -- 假设消息格式为: "cmd|params"
         local cmd, params = string.match(msg, "([^|]+)|?(.*)")
+        skynet.error(string.format("Game(%d) parse message: cmd=%s, params=%s", 
+            skynet.self(), cmd, params))
+        
         local f = HANDLER[cmd]
         if f then
             -- 处理消息并返回结果
             local response = f(fd, params)
             if response then
                 -- 通过agent返回给客户端
-                skynet.send(source, "lua", "send_client", response)
+                skynet.error(string.format("Game(%d) send response to agent(%d): %s", 
+                    skynet.self(), user.agent, response))
+                skynet.send(user.agent, "lua", "send_client", response)
             end
         else
-            skynet.error("Unknown command:", cmd)
+            skynet.error(string.format("Game(%d) unknown command: %s", skynet.self(), cmd))
         end
     end
 end
 
 -- 客户端断开连接
 function CMD.client_disconnect(fd)
+    local user = users[fd]
+    if user then
+        skynet.error(string.format("Game(%d) client disconnect, fd=%d, agent=%d", 
+            skynet.self(), fd, user.agent))
+    end
     users[fd] = nil
 end
 
--- 在 game.lua 中添加负载更新函数
+-- 负载更新函数
 local function update_load()
     if balance then
         local load = {
             connections = #users,
-            cpu = 0,  -- 可以添加CPU使用率统计
-            memory = 0,  -- 可以添加内存使用统计
+            cpu = 0,
+            memory = 0,
         }
-        -- 计算综合负载
         local total_load = load.connections * 0.6 + load.cpu * 0.2 + load.memory * 0.2
+        
+        skynet.error(string.format("Game(%d) update load: connections=%d, total_load=%.2f", 
+            skynet.self(), load.connections, total_load))
         
         skynet.send(balance, "lua", "update_service_status", 
             "game_services",
-            skynet.self(),  -- 使用服务自身的ID
+            skynet.self(),
             #users,
             total_load
         )

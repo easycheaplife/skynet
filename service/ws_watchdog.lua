@@ -8,11 +8,14 @@ local handler = {}
 local balance    -- 负载均衡服务
 
 function handler.connect(fd)
-    print("ws client connect", fd)
+    skynet.error(string.format("Watchdog(%d) new client connect, fd=%d", skynet.self(), fd))
     local agent = skynet.newservice("ws_agent")
+    skynet.error(string.format("Watchdog(%d) created agent(%d) for fd=%d", 
+        skynet.self(), agent, fd))
+    
     skynet.call(agent, "lua", "start", { 
         fd = fd,
-        balance = balance  -- 传递负载均衡服务
+        balance = balance
     })
     connection[fd] = agent
 end
@@ -28,10 +31,13 @@ function handler.handshake(fd, header, url)
 end
 
 function handler.message(fd, msg, msg_type)
-    -- msg_type: binary or text
     local agent = connection[fd]
     if agent then
+        skynet.error(string.format("Watchdog(%d) forward message to agent(%d), fd=%d, type=%s", 
+            skynet.self(), agent, fd, msg_type))
         skynet.send(agent, "lua", "message", msg, msg_type)
+    else
+        skynet.error(string.format("Watchdog(%d) no agent for fd=%d", skynet.self(), fd))
     end
 end
 
@@ -44,7 +50,8 @@ function handler.pong(fd)
 end
 
 function handler.close(fd, code, reason)
-    print("ws close from: " .. tostring(fd), code, reason)
+    skynet.error(string.format("Watchdog(%d) client close, fd=%d, code=%s, reason=%s", 
+        skynet.self(), fd, tostring(code), tostring(reason)))
     local agent = connection[fd]
     if agent then
         skynet.send(agent, "lua", "disconnect")
