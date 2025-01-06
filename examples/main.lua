@@ -17,6 +17,15 @@ skynet.start(function()
 		maxclient = max_client,
 		nodelay = true,
 	})
-	skynet.error("Watchdog listen on " .. addr .. ":" .. port)
+	skynet.error("Socket Watchdog listen on " .. addr .. ":" .. port)
+	
+	local ws_watchdog = skynet.newservice("ws_watchdog")
+	local ws_addr, ws_port = skynet.call(ws_watchdog, "lua", "start", {
+		port = 8889,
+		maxclient = max_client,
+		nodelay = true,
+	})
+	skynet.error("WebSocket Watchdog listen on " .. ws_addr .. ":" .. ws_port)
+	
 	skynet.exit()
 end)
