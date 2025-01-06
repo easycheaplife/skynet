@@ -1,6 +1,5 @@
 local skynet = require "skynet"
 local socket = require "skynet.socket"
-local cjson = require "cjson"
 
 local WATCHDOG
 local client_fd
@@ -24,13 +23,13 @@ function CMD.message(msg, msg_type)
     print("receive message", msg, msg_type)
     
     -- 这里处理业务逻辑
-    -- 如果是文本消息，可以解析 JSON
     if msg_type == "text" then
-        local ok, data = pcall(cjson.decode, msg)
-        if ok then
-            -- 处理 JSON 数据
-            print("received json:", data)
-        end
+        -- 直接处理文本消息
+        print("received text:", msg)
+        -- 这里可以添加消息处理逻辑
+    elseif msg_type == "binary" then
+        -- 处理二进制消息
+        print("received binary message, length:", #msg)
     end
 end
 

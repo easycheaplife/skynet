@@ -1,7 +1,6 @@
 local skynet = require "skynet"
 local socket = require "skynet.socket"
 local websocket = require "http.websocket"
-local cjson = require "cjson"
 
 local WATCHDOG
 local connection = {}
