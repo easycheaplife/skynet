@@ -5,7 +5,6 @@ local websocket = require "http.websocket"
 local WATCHDOG
 local client_fd
 local game     -- 游戏服务
-local ws_id    -- 保存 websocket id
 
 local CMD = {}
 local CLIENT = {}
@@ -19,9 +18,6 @@ function CMD.start(conf)
     skynet.error(string.format("Agent(%d) getting game service from balance(%d)", skynet.self(), balance))
     game = assert(skynet.call(balance, "lua", "get_game_service"))
     skynet.error(string.format("Agent(%d) got game service(%d)", skynet.self(), game))
-    
-    -- 保存 websocket id
-    ws_id = websocket.id(fd)
     
     skynet.call(WATCHDOG, "lua", "forward", fd)
 end
@@ -50,18 +46,9 @@ function CMD.send_client(msg)
     skynet.error(string.format("Agent(%d) send to client, fd=%d, msg=%s", 
         skynet.self(), client_fd, tostring(msg)))
     
-    -- 检查 websocket id 是否有效
-    if not ws_id then
-        skynet.error(string.format("Agent(%d) invalid websocket id for fd=%d", 
-            skynet.self(), client_fd))
-        return
-    end
-    
-    -- 这里可以根据需要选择文本或二进制格式
-    local ok, err = websocket.write(ws_id, msg, "text")
-    if not ok then
-        skynet.error(string.format("Agent(%d) send to client error: %s", skynet.self(), err))
-    end
+    -- 使用 socket.write 发送数据
+    local frame = websocket.build_frame(msg, "text", true, true)
+    socket.write(client_fd, frame)
 end
 
 skynet.start(function()
