@@ -62,7 +62,7 @@ local function update_load()
         
         skynet.send(balance, "lua", "update_service_status", 
             "game_services",
-            skynet.self(),
+            skynet.self(),  -- 使用服务自身的ID
             #users,
             total_load
         )
@@ -79,8 +79,9 @@ local function start_load_update()
 end
 
 function CMD.start(conf)
-    balance = conf.balance
+    balance = assert(conf.balance, "balance service not found")
     start_load_update()
+    return true
 end
 
 skynet.start(function()

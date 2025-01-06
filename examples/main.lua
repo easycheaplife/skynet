@@ -38,10 +38,14 @@ local GAME_CONF = {
 }
 
 -- 启动游戏服务组
-local function start_game_services()
+local function start_game_services(balance_service)
 	local game_services = {}
 	for i = 1, GAME_CONF.instance_count do
 		local game = skynet.newservice("game")
+		-- 初始化游戏服务，传入负载均衡服务
+		skynet.call(game, "lua", "start", {
+			balance = balance_service
+		})
 		table.insert(game_services, game)
 	end
 	return game_services
@@ -93,11 +97,11 @@ skynet.start(function()
 	skynet.newservice("debug_console", 8000)
 	skynet.newservice("simpledb")
 	
-	-- 启动游戏服务组
-	local game_services = start_game_services()
-	
-	-- 启动负载均衡服务
+	-- 先启动负载均衡服务
 	local balance_service = start_balance_service()
+	
+	-- 启动游戏服务组，传入负载均衡服务
+	local game_services = start_game_services(balance_service)
 	
 	-- 注册游戏服务到负载均衡服务
 	skynet.call(balance_service, "lua", "register_game_services", game_services)

@@ -10,7 +10,10 @@ local balance    -- 负载均衡服务
 function handler.connect(fd)
     print("ws client connect", fd)
     local agent = skynet.newservice("ws_agent")
-    skynet.call(agent, "lua", "start", { fd = fd })
+    skynet.call(agent, "lua", "start", { 
+        fd = fd,
+        balance = balance  -- 传递负载均衡服务
+    })
     connection[fd] = agent
 end
 
@@ -89,7 +92,7 @@ local function start_load_update()
 end
 
 function CMD.start(conf)
-    balance = conf.balance
+    balance = conf.balance  -- 保存负载均衡服务引用
     start_load_update()
     local protocol = conf.protocol or "ws"
     local port = assert(conf.port)
