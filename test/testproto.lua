@@ -43,9 +43,7 @@ local function test_person()
     for i, phone in ipairs(decoded.phones) do
         skynet.error(string.format("电话 #%d: %s (%s)",
             i, phone.number,
-            phone.type == 0 and "移动" or
-            phone.type == 1 and "家庭" or
-            phone.type == 2 and "工作" or "未知"
+            phone.type
         ))
     end
 end
